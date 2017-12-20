@@ -11,52 +11,39 @@ pub const TYPING_TIMEOUT: u8 = 10;
 
 pub const LIMIT_USER_NAME:    usize = 128;
 pub const LIMIT_CHANNEL_NAME: usize = 128;
-pub const LIMIT_GROUP_NAME:   usize = 128;
-pub const LIMIT_GROUP_AMOUNT: usize = 2048;
 pub const LIMIT_MESSAGE:      usize = 16384;
 
 pub const LIMIT_BULK:         usize = 64;
 
-pub const ERR_GROUP_INVALID_POS:   u8 = 1;
-pub const ERR_GROUP_LOCKED_NAME:   u8 = 2;
-pub const ERR_LIMIT_REACHED:      u8 = 3;
-pub const ERR_LOGIN_BANNED:       u8 = 4;
-pub const ERR_LOGIN_BOT:          u8 = 5;
-pub const ERR_LOGIN_INVALID:      u8 = 6;
-pub const ERR_MAX_CONN_PER_IP:    u8 = 7;
-pub const ERR_MISSING_FIELD:      u8 = 8;
-pub const ERR_MISSING_PERMISSION: u8 = 9;
-pub const ERR_NAME_TAKEN:         u8 = 10;
-pub const ERR_UNKNOWN_BOT:        u8 = 11;
-pub const ERR_UNKNOWN_CHANNEL:    u8 = 12;
-pub const ERR_UNKNOWN_GROUP:      u8 = 13;
-pub const ERR_UNKNOWN_MESSAGE:    u8 = 14;
-pub const ERR_UNKNOWN_USER:       u8 = 15;
+pub const ERR_LIMIT_REACHED:      u8 = 1;
+pub const ERR_LOGIN_BANNED:       u8 = 2;
+pub const ERR_LOGIN_BOT:          u8 = 3;
+pub const ERR_LOGIN_INVALID:      u8 = 4;
+pub const ERR_MAX_CONN_PER_IP:    u8 = 5;
+pub const ERR_MISSING_FIELD:      u8 = 6;
+pub const ERR_MISSING_PERMISSION: u8 = 7;
+pub const ERR_NAME_TAKEN:         u8 = 8;
+pub const ERR_UNKNOWN_BOT:        u8 = 9;
+pub const ERR_UNKNOWN_CHANNEL:    u8 = 10;
+pub const ERR_UNKNOWN_MESSAGE:    u8 = 11;
+pub const ERR_UNKNOWN_USER:       u8 = 12;
 
 pub const PERM_READ:              u8 = 1;
 pub const PERM_WRITE:             u8 = 1 << 1;
 
-pub const PERM_ASSIGN_GROUPS:     u8 = 1 << 2;
-pub const PERM_BAN:               u8 = 1 << 3;
-pub const PERM_MANAGE_CHANNELS:   u8 = 1 << 4;
-pub const PERM_MANAGE_GROUPS:     u8 = 1 << 5;
-pub const PERM_MANAGE_MESSAGES:   u8 = 1 << 6;
+pub const PERM_MANAGE_CHANNELS:   u8 = 1 << 2;
+pub const PERM_MANAGE_MESSAGES:   u8 = 1 << 3;
+pub const PERM_MANAGE_MODES:      u8 = 1 << 4;
+
+pub const PERM_ALL: u8 = PERM_READ | PERM_WRITE | PERM_MANAGE_CHANNELS | PERM_MANAGE_MESSAGES | PERM_MANAGE_MODES;
 
 // TYPES
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Channel {
+    pub default_mode_bot:  u8,
+    pub default_mode_user: u8,
     pub id: usize,
-    pub name: String,
-    pub overrides: HashMap<usize, (u8, u8)>
-}
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct Group {
-    pub allow: u8,
-    pub deny: u8,
-    pub id: usize,
-    pub name: String,
-    pub pos: usize,
-    pub unassignable: bool
+    pub name: String
 }
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Message {
@@ -69,10 +56,11 @@ pub struct Message {
 }
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct User {
+    pub admin: bool,
     pub ban: bool,
     pub bot: bool,
-    pub groups: Vec<usize>,
     pub id: usize,
+    pub modes: HashMap<usize, u8>,
     pub name: String
 }
 
@@ -81,8 +69,9 @@ pub struct User {
 pub struct Close;
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct ChannelCreate {
-    pub name: String,
-    pub overrides: HashMap<usize, (u8, u8)>
+    pub default_mode_bot:  u8,
+    pub default_mode_user: u8,
+    pub name: String
 }
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct ChannelDelete {
@@ -90,29 +79,12 @@ pub struct ChannelDelete {
 }
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct ChannelUpdate {
-    pub inner: Channel,
-    pub keep_overrides: bool
+    pub inner: Channel
 }
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Command {
     pub args: Vec<String>,
     pub recipient: usize
-}
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct GroupCreate {
-    pub allow: u8,
-    pub deny: u8,
-    pub name: String,
-    pub pos: usize,
-    pub unassignable: bool
-}
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct GroupDelete {
-    pub id: usize
-}
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct GroupUpdate {
-    pub inner: Group
 }
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Login {
@@ -165,8 +137,9 @@ pub struct Typing {
 }
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct UserUpdate {
+    pub admin: Option<bool>,
     pub ban: Option<bool>,
-    pub groups: Option<Vec<usize>>,
+    pub channel_mode: Option<(usize, Option<u8>)>,
     pub id: usize
 }
 
@@ -183,15 +156,6 @@ pub struct ChannelReceive {
 pub struct CommandReceive {
     pub args: Vec<String>,
     pub author: usize
-}
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct GroupDeleteReceive {
-    pub inner: Group
-}
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct GroupReceive {
-    pub inner: Group,
-    pub new: bool
 }
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct LoginSuccess {
@@ -240,9 +204,6 @@ packet! (
     ChannelDelete,
     ChannelUpdate,
     Command,
-    GroupCreate,
-    GroupDelete,
-    GroupUpdate,
     Login,
     LoginUpdate,
     MessageCreate,
@@ -257,8 +218,6 @@ packet! (
     ChannelDeleteReceive,
     ChannelReceive,
     CommandReceive,
-    GroupDeleteReceive,
-    GroupReceive,
     LoginSuccess,
     MessageDeleteReceive,
     MessageReceive,
@@ -338,15 +297,4 @@ pub fn write<T: io::Write>(writer: &mut T, packet: &Packet) -> Result<(), Error>
     writer.flush()?;
 
     Ok(())
-}
-
-pub fn perm_apply_iter<I: Iterator<Item = (u8, u8)>>(into: &mut u8, groups: &mut I) {
-    // Expects groups to be sorted
-    for group in groups {
-        perm_apply(into, group);
-    }
-}
-pub fn perm_apply(into: &mut u8, (allow, deny): (u8, u8)) {
-    *into |= allow;
-    *into &= !deny;
 }
