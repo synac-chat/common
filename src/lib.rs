@@ -5,9 +5,9 @@ extern crate rmp_serde as rmps;
 use std::collections::HashMap;
 use std::io;
 
-pub const DEFAULT_PORT: u16  = 8439;
-pub const RSA_LENGTH: u32    = 3072;
-pub const TYPING_TIMEOUT: u8 = 10;
+pub const DEFAULT_PORT:   u16 = 8439;
+pub const RSA_LENGTH:     u32 = 3072;
+pub const TYPING_TIMEOUT: u8  = 10;
 
 pub const LIMIT_USER_NAME:    usize = 128;
 pub const LIMIT_CHANNEL_NAME: usize = 128;
@@ -65,8 +65,6 @@ pub struct User {
 }
 
 // CLIENT PACKETS
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct Close;
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct ChannelCreate {
     pub default_mode_bot:  u8,
@@ -187,44 +185,66 @@ pub struct UserReceive {
     pub inner: User
 }
 
-macro_rules! packet {
-    ($($type:ident),+) => {
-        #[derive(Clone, Debug, Deserialize, Serialize)]
-        #[serde(rename_all = "snake_case")]
-        pub enum Packet {
-            Close,
-            Err(u8),
-            RateLimited(u64),
-            $($type($type),)+
-        }
-    }
-}
-packet! (
-    ChannelCreate,
-    ChannelDelete,
-    ChannelUpdate,
-    Command,
-    Login,
-    LoginUpdate,
-    MessageCreate,
-    MessageDelete,
-    MessageDeleteBulk,
-    MessageList,
-    MessageUpdate,
-    PrivateMessage,
-    Typing,
-    UserUpdate,
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Packet {
+    /// a polite way to close, since the server otherwise won't notice you're gone until some time
+    Close,
+    /// an error was received. see ERR_* variables.
+    Err(u8),
+    /// you are ratelimited for X seconds
+    RateLimited(u64),
 
-    ChannelDeleteReceive,
-    ChannelReceive,
-    CommandReceive,
-    LoginSuccess,
-    MessageDeleteReceive,
-    MessageReceive,
-    PMReceive,
-    TypingReceive,
-    UserReceive
-);
+    /// create a new channel
+    ChannelCreate(ChannelCreate),
+    /// delete a channel
+    ChannelDelete(ChannelDelete),
+    /// edit a channel
+    ChannelUpdate(ChannelUpdate),
+    /// send a bot command
+    Command(Command),
+    /// actually log in. this is required before anything else.
+    Login(Login),
+    /// update your login credentials. reset_token is ignored and treated as true if password is set.
+    LoginUpdate(LoginUpdate),
+    /// send a new message
+    MessageCreate(MessageCreate),
+    /// delete a message
+    MessageDelete(MessageDelete),
+    /// delete a bunch of messages
+    MessageDeleteBulk(MessageDeleteBulk),
+    /// list `limit` most recent messages, optionally before/after a value
+    MessageList(MessageList),
+    /// update a message
+    MessageUpdate(MessageUpdate),
+    /// send a private message. these are not stored anywhere, and should be end to end encrypted
+    PrivateMessage(PrivateMessage),
+    /// send a typing indicator. timeouts after TYPING_TIMEOUT seconds.
+    Typing(Typing),
+    /// update a user (for login info, see LoginUpdate)
+    UserUpdate(UserUpdate),
+
+    /// a channel was deleted
+    ChannelDeleteReceive(ChannelDeleteReceive),
+    /// a channel was created/edited/initially sent
+    ChannelReceive(ChannelReceive),
+    /// a command was received (bot only)
+    CommandReceive(CommandReceive),
+    /// login was successful. save the token and use that next time.
+    LoginSuccess(LoginSuccess),
+    /// a message was deleted
+    MessageDeleteReceive(MessageDeleteReceive),
+    /// a message list operation was finished
+    MessageListReceived,
+    /// a message was created/edited/initially sent
+    MessageReceive(MessageReceive),
+    /// a private message was received. these are not stored on the server.
+    PMReceive(PMReceive),
+    /// a typing event was received. timeout after TYPING_TIMEOUT seconds.
+    TypingReceive(TypingReceive),
+    /// a user was created/edited
+    UserReceive(UserReceive)
+}
 
 pub fn serialize(packet: &Packet) -> Result<Vec<u8>, rmps::encode::Error> {
     rmps::to_vec(&packet)
