@@ -15,18 +15,19 @@ pub const LIMIT_MESSAGE:      usize = 16384;
 
 pub const LIMIT_BULK:         usize = 64;
 
-pub const ERR_LIMIT_REACHED:      u8 = 1;
-pub const ERR_LOGIN_BANNED:       u8 = 2;
-pub const ERR_LOGIN_BOT:          u8 = 3;
-pub const ERR_LOGIN_INVALID:      u8 = 4;
-pub const ERR_MAX_CONN_PER_IP:    u8 = 5;
-pub const ERR_MISSING_FIELD:      u8 = 6;
-pub const ERR_MISSING_PERMISSION: u8 = 7;
-pub const ERR_NAME_TAKEN:         u8 = 8;
-pub const ERR_UNKNOWN_BOT:        u8 = 9;
-pub const ERR_UNKNOWN_CHANNEL:    u8 = 10;
-pub const ERR_UNKNOWN_MESSAGE:    u8 = 11;
-pub const ERR_UNKNOWN_USER:       u8 = 12;
+pub const ERR_ALREADY_EXISTS:     u8 = 1;
+pub const ERR_LIMIT_REACHED:      u8 = 2;
+pub const ERR_LOGIN_BANNED:       u8 = 3;
+pub const ERR_LOGIN_BOT:          u8 = 4;
+pub const ERR_LOGIN_INVALID:      u8 = 5;
+pub const ERR_MAX_CONN_PER_IP:    u8 = 6;
+pub const ERR_MISSING_FIELD:      u8 = 7;
+pub const ERR_MISSING_PERMISSION: u8 = 8;
+pub const ERR_SELF_PM:            u8 = 9;
+pub const ERR_UNKNOWN_BOT:        u8 = 10;
+pub const ERR_UNKNOWN_CHANNEL:    u8 = 11;
+pub const ERR_UNKNOWN_MESSAGE:    u8 = 12;
+pub const ERR_UNKNOWN_USER:       u8 = 13;
 
 pub const PERM_READ:              u8 = 1;
 pub const PERM_WRITE:             u8 = 1 << 1;
@@ -43,7 +44,8 @@ pub struct Channel {
     pub default_mode_bot:  u8,
     pub default_mode_user: u8,
     pub id: usize,
-    pub name: String
+    pub name: String,
+    pub private: bool
 }
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Message {
@@ -69,7 +71,8 @@ pub struct User {
 pub struct ChannelCreate {
     pub default_mode_bot:  u8,
     pub default_mode_user: u8,
-    pub name: String
+    pub name: String,
+    pub recipient: Option<usize>
 }
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct ChannelDelete {
@@ -125,11 +128,6 @@ pub struct MessageUpdate {
     pub text: Vec<u8>
 }
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct PrivateMessage {
-    pub text: Vec<u8>,
-    pub recipient: usize
-}
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Typing {
     pub channel: usize
 }
@@ -169,11 +167,6 @@ pub struct MessageDeleteReceive {
 pub struct MessageReceive {
     pub inner: Message,
     pub new: bool
-}
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct PMReceive {
-    pub author: usize,
-    pub text: Vec<u8>
 }
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct TypingReceive {
@@ -217,8 +210,6 @@ pub enum Packet {
     MessageList(MessageList),
     /// update a message
     MessageUpdate(MessageUpdate),
-    /// send a private message. these are not stored anywhere, and should be end to end encrypted
-    PrivateMessage(PrivateMessage),
     /// send a typing indicator. timeouts after TYPING_TIMEOUT seconds.
     Typing(Typing),
     /// update a user (for login info, see LoginUpdate)
@@ -238,8 +229,6 @@ pub enum Packet {
     MessageListReceived,
     /// a message was created/edited/initially sent
     MessageReceive(MessageReceive),
-    /// a private message was received. these are not stored on the server.
-    PMReceive(PMReceive),
     /// a typing event was received. timeout after TYPING_TIMEOUT seconds.
     TypingReceive(TypingReceive),
     /// a user was created/edited
