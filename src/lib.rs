@@ -181,8 +181,6 @@ pub struct UserReceive {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Packet {
-    /// a polite way to close, since the server otherwise won't notice you're gone until some time
-    Close,
     /// an error was received. see ERR_* variables.
     Err(u8),
     /// you are ratelimited for X seconds
